@@ -1,0 +1,150 @@
+version = 3
+final_space = true
+
+[transient_prompt]
+  template = '❯ '
+  foreground = '#ffffff'
+  background = 'transparent'
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'left'
+
+  [[blocks.segments]]
+    template = ''
+    foreground = '#89b4fa'
+    background = 'transparent'
+    type = 'text'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = '{{ .Icon }} '
+    foreground = '#1e1e2e'
+    background = '#89b4fa'
+    type = 'os'
+    style = 'powerline'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = ' <b>{{ .Path }}</b> '
+    foreground = '#1e1e2e'
+    powerline_symbol = ''
+    background = '#fab387'
+    type = 'path'
+    style = 'powerline'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      mapped_locations_enabled = true
+      style = 'mixed'
+      threshold = 1
+
+  [[blocks.segments]]
+    template = ' {{ .UserName }} '
+    foreground = '#cdd6f4'
+    powerline_symbol = ''
+    background = '#313244'
+    type = 'session'
+    style = 'powerline'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = ' {{ .HEAD }}{{ if .Working.Changed }}  {{ end }} '
+    foreground = '#1e1e2e'
+    powerline_symbol = ''
+    background = '#a6e3a1'
+    type = 'git'
+    style = 'powerline'
+    background_templates = ['{{ if or (.Working.Changed) (.Staging.Changed) }}#f9e2af{{ end }}']
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      fetch_status = true
+
+[[blocks]]
+  type = 'rprompt'
+  overflow = 'hide'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ' '
+    template = ' {{ .Full }}'
+    foreground = '#1e1e2e'
+    background = '#f9e2af'
+    type = 'python'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ' '
+    template = ' {{ .Full }}'
+    foreground = '#1e1e2e'
+    background = '#a6e3a1'
+    type = 'node'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ' '
+    template = ' {{ .Full }}'
+    foreground = '#1e1e2e'
+    background = '#fab387'
+    type = 'rust'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ' '
+    template = ' {{ .Full }}'
+    foreground = '#1e1e2e'
+    background = '#89dceb'
+    type = 'go'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ' '
+    template = ' {{ .FormattedMs }}'
+    foreground = '#1e1e2e'
+    background = '#cba6f7'
+    type = 'executiontime'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      threshold = 500
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ''
+    foreground = '#1e1e2e'
+    background = '#94e2d5'
+    type = 'battery'
+    style = 'diamond'
+
+    [blocks.segments.properties]
+      background_templates = ['{{if eq "Discharging" .State.String}}{{if lt .Percentage 20}}#f38ba8{{end}}{{end}}']
+      cache_duration = 'none'
+      charged_icon = ' '
+      charging_icon = ' '
+      discharging_icon = ' '
+      template = '{{ if not .Error }}{{ if and (eq .State.String "Discharging") (lt .Percentage 20) }} {{ else }}{{ .Icon }}{{ end }}{{ .Percentage }}%{{ end }}'
