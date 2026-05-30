@@ -25,13 +25,11 @@ setopt INC_APPEND_HISTORY
 eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/dev_mocha.toml)"
 
 # Zoxide (Smart Directory Jumper)
-# Esto inicializa zoxide y habilita el comando 'z' y 'zi'
 eval "$(zoxide init zsh)"
 
 # ==============================================================================
 # 3. AUTOCOMPLETADO AVANZADO (ZSTYLE)
 # ==============================================================================
-# AVISO: El fpath debe definirse ANTES de iniciar compinit
 fpath=(~/.zsh_plugins/zsh-completions/src $fpath)
 
 # Iniciar el sistema de autocompletado
@@ -63,8 +61,6 @@ source ~/.zsh_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 # ==============================================================================
 
 # --- Auto-Listado al cambiar de directorio ---
-# Esta función se ejecuta automáticamente cada vez que cambias de carpeta (con cd o z)
-# Muestra el contenido inmediatamente usando lsd.
 function chpwd() {
     lsd --group-dirs=first
 }
@@ -128,11 +124,8 @@ function cleartarget(){
 # ==============================================================================
 # 6. ALIASES
 # ==============================================================================
-
-# Reemplazo de CD por Zoxide
-# 'z' es el comando nativo, pero aliaseamos 'cd' para que sea transparente
 alias cd='z' 
-alias cdi='zi' # 'cdi' abrirá el buscador interactivo de carpetas
+alias cdi='zi'
 
 # LSD y BAT
 alias cat='bat'
@@ -169,7 +162,23 @@ bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
 
 # ==============================================================================
-# 8. FINALIZACIÓN
+# 8. FINALIZACIÓN Y CORRECCIÓN DE SINTAXIS VISUAL
 # ==============================================================================
 source ~/.zsh_plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# FIX DEFINITIVO PARA EVITAR LETRAS NEGRAS O INVISIBLES EN KITTY
+# Se fuerza el uso de la paleta explícita de Catppuccin Mocha en formato hexadecimal (Truecolor)
+ZSH_HIGHLIGHT_STYLES[default]='fg=#cdd6f4'
+ZSH_HIGHLIGHT_STYLES[comment]='fg=#6c7086,italic'
+ZSH_HIGHLIGHT_STYLES[command]='fg=#a6e3a1'          # Verde para comandos nativos
+ZSH_HIGHLIGHT_STYLES[alias]='fg=#a6e3a1'            # Verde para tus alias personalizados
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=#a6e3a1'          # Verde para comandos integrados
+ZSH_HIGHLIGHT_STYLES[function]='fg=#a6e3a1'         # Verde para funciones de shell
+ZSH_HIGHLIGHT_STYLES[keyword]='fg=#cba6f7'
+ZSH_HIGHLIGHT_STYLES[string]='fg=#a6e3a1'
+ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#f9e2af'
+ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#f9e2af'
+ZSH_HIGHLIGHT_STYLES[path]='fg=#f5e0dc'
+ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#f38ba8,bold'
+
 ZLE_RPROMPT_INDENT=0

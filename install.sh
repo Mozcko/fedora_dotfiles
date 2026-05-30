@@ -2,8 +2,8 @@
 
 # ==============================================================================
 # SCRIPT DE INSTALACIÓN AUTOMATIZADA PARA FEDORA (DEV & PERSONAL ENVIRONMENT)
-# Incluye: Zsh, OhMyPosh, Kitty, NvChad, Lenguajes, Apps (DNF/Flatpak), 
-#          Temas Visuales, Extensiones de GNOME y Preferencias de Sistema.
+# Incluye: Purga de Bloatware, Zsh, OhMyPosh, Kitty, NvChad, Lenguajes, Apps 
+#          (DNF/Flatpak), Temas Visuales, Extensiones y Preferencias de Sistema.
 # ==============================================================================
 
 # Colores para logs
@@ -14,46 +14,71 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}[*] Iniciando configuración completa de tu entorno en Fedora...${NC}"
 
-# Guardar el directorio actual del repositorio de dotfiles
-DOTFILES_DIR=$(pwd)
+# Detecta dinámicamente la ruta física real donde reside este script
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ==============================================================================
-# 1. ACTUALIZACIÓN Y REPOSITORIOS EXTERNOS
+# 0. SANITIZACIÓN PREVIA (IDEMPOTENCIA)
 # ==============================================================================
-echo -e "${BLUE}[*] Configurando repositorios de software externos...${NC}"
+echo -e "${BLUE}[*] Limpiando caché y repositorios de intentos previos...${NC}"
 
-# Actualizar índices base
-sudo dnf upgrade --refresh -y
+# Eliminar cualquier rastro de repositorios externos conflictivos o rotos
+sudo rm -f /etc/yum.repos.d/shiftkey-packages.repo
+sudo rm -f /etc/yum.repos.d/gh-cli.repo
+sudo rm -f /etc/yum.repos.d/vscode.repo
+sudo rm -f /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:ulauncher:ulauncher.repo
+
+# Asegurar la eliminación de enlaces simbólicos rotos previos en el Home si existen
+rm -f "$HOME/.zshrc"
+
+# Limpiar la caché de DNF por completo
+sudo dnf clean all
+
+# ==============================================================================
+# 1. PURGA DE BLOATWARE
+# ==============================================================================
+echo -e "${BLUE}[*] Eliminando Bloatware de Fedora (LibreOffice, GNOME Tour, etc.)...${NC}"
+
+sudo dnf remove -y \
+    libreoffice* \
+    mediawriter \
+    gnome-tour \
+    rhythmbox \
+    totem \
+    gnome-connections
+
+# ==============================================================================
+# 2. CONFIGURACIÓN DE REPOSITORIOS EXTERNOS
+# ==============================================================================
+echo -e "${BLUE}[*] Configurando repositorios de software externos oficiales...${NC}"
 
 # Repositorio oficial de Visual Studio Code
 sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
 sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
 
-# Repositorio oficial de GitHub CLI
-sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+# Repositorio oficial de GitHub CLI (Descarga directa del .repo)
+sudo curl -fsSL https://cli.github.com/packages/rpm/gh-cli.repo -o /etc/yum.repos.d/gh-cli.repo
 
-# Repositorio de la comunidad para GitHub Desktop (Shiftkey)
-sudo rpm --import https://rpm.packages.shiftkey.dev/gpg.key
-sudo sh -c 'echo -e "[shiftkey-packages]\nname=GitHub Desktop\nbaseurl=https://rpm.packages.shiftkey.dev/rpm/\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.packages.shiftkey.dev/gpg.key" > /etc/yum.repos.d/shiftkey-packages.repo'
+echo -e "${BLUE}[*] Refrescando repositorios del sistema...${NC}"
+sudo dnf upgrade --refresh -y
 
 # ==============================================================================
-# 2. INSTALACIÓN DE PAQUETES DEL SISTEMA (DNF)
+# 3. INSTALACIÓN DE PAQUETES DEL SISTEMA (DNF)
 # ==============================================================================
 echo -e "${BLUE}[*] Instalando aplicaciones y dependencias nativas vía DNF...${NC}"
 
-sudo dnf install -y \
-    zsh git curl wget unzip tar bat lsd fzf zoxide neovim ripgrep fd-find \
+sudo dnf install -y --skip-unavailable \
+    kitty zsh git curl wget unzip tar bat lsd fzf zoxide neovim ripgrep fd-find \
     util-linux-user gcc-c++ make python3-pip pipx java-latest-openjdk-devel npm \
-    code gh github-desktop gnome-tweaks ulauncher podman \
-    gnome-shell-extension-user-theme
+    code gh gnome-tweaks gnome-extensions-app ulauncher podman \
+    gnome-shell-extension-user-theme bibata-cursor-themes
 
 # ==============================================================================
-# 3. INSTALACIÓN DE APLICACIONES EN RÁFAGA (FLATPAK VIA FLATHUB)
+# 4. INSTALACIÓN DE APLICACIONES EN RÁFAGA (FLATPAK VIA FLATHUB)
 # ==============================================================================
 echo -e "${BLUE}[*] Configurando Flathub e instalando aplicaciones gráficas...${NC}"
 sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-# Instalación masiva de Flatpaks (Incluye Opera y herramientas de contenido con códecs)
 sudo flatpak install -y flathub \
     com.opera.Opera \
     com.rtosta.zapzap \
@@ -68,11 +93,12 @@ sudo flatpak install -y flathub \
     com.jgraph.drawio.desktop \
     org.onlyoffice.desktopeditors \
     eu.betterbird.Betterbird \
-    com.github.alainm23.beaver \
+    com.beavernotes.beavernotes \
+    io.github.shiftey.Desktop \
     com.parsecgaming.parsec
 
 # ==============================================================================
-# 4. FUENTES (FiraMono Nerd Font)
+# 5. FUENTES (FiraMono Nerd Font)
 # ==============================================================================
 FONT_DIR="$HOME/.local/share/fonts"
 if [ ! -d "$FONT_DIR/FiraMono" ]; then
@@ -87,145 +113,130 @@ else
 fi
 
 # ==============================================================================
-# 5. CONFIGURACIÓN DE NVCHAD (NEOVIM)
+# 6. CONFIGURACIÓN DE NVCHAD (NEOVIM)
 # ==============================================================================
 NVIM_CONFIG="$HOME/.config/nvim"
-if [ -d "$NVIM_CONFIG" ]; then
-    if [ -d "$NVIM_CONFIG/.git" ]; then
-        echo -e "${GREEN}[OK] Neovim ya tiene una configuración activa.${NC}"
-    else
-        echo -e "${YELLOW}[!] Resguardando configuración previa de Neovim...${NC}"
-        mv "$NVIM_CONFIG" "${NVIM_CONFIG}.bak.$(date +%s)"
-        git clone https://github.com/NvChad/starter "$NVIM_CONFIG"
-    fi
-else
+if [ ! -d "$NVIM_CONFIG/.git" ]; then
     echo -e "${BLUE}[*] Clonando NvChad...${NC}"
+    rm -rf "$NVIM_CONFIG" "$HOME/.local/share/nvim"
     git clone https://github.com/NvChad/starter "$NVIM_CONFIG"
 fi
-rm -rf "$HOME/.local/share/nvim"
 
 # ==============================================================================
-# 6. OH MY POSH
+# 7. OH MY POSH
 # ==============================================================================
 if ! command -v oh-my-posh &> /dev/null; then
     echo -e "${BLUE}[*] Instalando Oh My Posh...${NC}"
+    mkdir -p "$HOME/.local/bin"
     curl -s https://ohmyposh.dev/install.sh | bash -s -- -d ~/.local/bin
-else
-    echo -e "${GREEN}[OK] Oh My Posh ya está presente.${NC}"
 fi
 
 # ==============================================================================
-# 7. PLUGINS DE ZSH
+# 8. PLUGINS DE ZSH
 # ==============================================================================
 echo -e "${BLUE}[*] Descargando plugins globales de Zsh...${NC}"
 PLUGIN_DIR="$HOME/.zsh_plugins"
 mkdir -p "$PLUGIN_DIR"
 
 install_plugin() {
-    REPO=$1
-    DIR_NAME=$(basename $REPO)
-    TARGET="$PLUGIN_DIR/$DIR_NAME"
-    if [ ! -d "$TARGET" ]; then
-        git clone --depth 1 "https://github.com/$REPO.git" "$TARGET"
+    if [ ! -d "$PLUGIN_DIR/$(basename $1)" ]; then
+        git clone --depth 1 "https://github.com/$1.git" "$PLUGIN_DIR/$(basename $1)"
     fi
 }
-
 install_plugin "zsh-users/zsh-autosuggestions"
 install_plugin "zsh-users/zsh-syntax-highlighting"
 install_plugin "zsh-users/zsh-completions"
 
 # ==============================================================================
-# 8. GESTIÓN DE LENGUAJES (NVM, NODE, PNPM, GEMINI-CLI)
+# 9. GESTIÓN DE LENGUAJE (NVM, NODE, PNPM)
 # ==============================================================================
 export NVM_DIR="$HOME/.nvm"
 if [ ! -d "$NVM_DIR" ]; then
     echo -e "${BLUE}[*] Configurando entorno Node con NVM...${NC}"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    
-    # Cargar NVM en la sesión actual de instalación
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    
     nvm install --lts
     nvm use --lts
-    npm install -g pnpm gemini-cli
+    npm install -g pnpm
 else
-    echo -e "${GREEN}[OK] NVM y Node ya se encuentran instalados.${NC}"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    npm install -g gemini-cli
 fi
 
 # ==============================================================================
-# 9. INSTALACIÓN AUTOMÁTICA DE EXTENSIONES DE GNOME
+# 10. INSTALACIÓN AUTOMÁTICA DE EXTENSIONES DE GNOME
 # ==============================================================================
 echo -e "${BLUE}[*] Configurando inyector automatizado de GNOME Extensions...${NC}"
 pipx install gnome-extensions-cli --force
 export PATH="$PATH:$HOME/.local/bin"
 
-# Instalar tus extensiones directamente desde el repositorio de GNOME
 ~/.local/bin/gext install Vitals@CoreCoding.com
 ~/.local/bin/gext install logomenu@aryan_k
 ~/.local/bin/gext install space-bar@luchrioh
 
 # ==============================================================================
-# 10. DESCARGA E INYECCIÓN DE TEMAS (GRAPHITE, REVERSAL, BIBATA)
+# 11. DESCARGA E INYECCIÓN DE TEMAS (GRAPHITE CUSTOM LAYOUT, REVERSAL)
 # ==============================================================================
-echo -e "${BLUE}[*] Descargando y compilando temas visuales...${NC}"
+echo -e "${BLUE}[*] Configurando temas visuales personalizados...${NC}"
 mkdir -p "$HOME/.themes" "$HOME/.icons"
 TEMP_THEMES="/tmp/fedora_themes"
 mkdir -p "$TEMP_THEMES"
 
-# Tema GTK Graphite (Teal, Dark, Nord)
+# Compilación exacta con tus tweaks favoritos (float, colorful, nord, rimless, teal)
+echo -e "${BLUE}[*] Compilando e instalando Graphite Layout en modo Islas Flotantes...${NC}"
+rm -rf "$HOME/.themes/Graphite-teal-Dark-nord"
 git clone https://github.com/vinceliuice/Graphite-gtk-theme.git "$TEMP_THEMES/graphite"
-"$TEMP_THEMES/graphite/install.sh" -t teal -c dark --tweaks nord -d "$HOME/.themes"
+"$TEMP_THEMES/graphite/install.sh" --tweaks float colorful nord rimless -t teal -d "$HOME/.themes"
 
 # Iconos Reversal Dark
-git clone https://github.com/yeyushengfan258/Reversal-icon-theme.git "$TEMP_THEMES/reversal"
-"$TEMP_THEMES/reversal/install.sh" -a -d "$HOME/.icons"
+if [ ! -d "$HOME/.icons/Reversal-dark" ]; then
+    git clone https://github.com/yeyushengfan258/Reversal-icon-theme.git "$TEMP_THEMES/reversal"
+    "$TEMP_THEMES/reversal/install.sh" -a -d "$HOME/.icons"
+fi
+rm -rf "$TEMP_THEMES"
 
-# Cursor Bibata Modern Ice
-wget -O /tmp/Bibata.tar.gz https://github.com/ful1e5/Bibata_Cursor/releases/latest/download/Bibata-Modern-Ice.tar.gz
-tar -xzvf /tmp/Bibata.tar.gz -C "$HOME/.icons/"
-
-rm -rf "$TEMP_THEMES" /tmp/Bibata.tar.gz
-
-# Forzar a Flatpak a heredar y reconocer los temas visuales locales del sistema
+# Forzar Flatpak a heredar temas e iconos del sistema
 sudo flatpak override --env=GTK_THEME=Graphite-teal-Dark-nord
 sudo flatpak override --env=ICON_THEME=Reversal-dark
 sudo flatpak override --filesystem=$HOME/.themes
 sudo flatpak override --filesystem=$HOME/.icons
 
 # ==============================================================================
-# 11. ENLACES SIMBÓLICOS (Alineación con tu Repositorio)
+# 12. COPIA DE CONFIGURACIONES (CERO ENLACES SIMBÓLICOS)
 # ==============================================================================
-echo -e "${BLUE}[*] Enlazando simbólicamente tus dotfiles...${NC}"
+echo -e "${BLUE}[*] Copiando tus dotfiles de forma permanente...${NC}"
 
 mkdir -p "$HOME/.config/kitty"
 mkdir -p "$HOME/.config/ohmyposh"
 
-# Crear enlaces persistentes hacia los archivos del repositorio clonado
-ln -sf "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
-ln -sf "$DOTFILES_DIR/config/kitty/kitty.conf" "$HOME/.config/kitty/kitty.conf"
-ln -sf "$DOTFILES_DIR/config/ohmyposh/dev_mocha.toml" "$HOME/.config/ohmyposh/dev_mocha.toml"
+# Copias duras (independientes del repositorio)
+cp -f "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
+cp -f "$DOTFILES_DIR/config/kitty/kitty.conf" "$HOME/.config/kitty/kitty.conf"
+cp -f "$DOTFILES_DIR/config/ohmyposh/dev_mocha.toml" "$HOME/.config/ohmyposh/dev_mocha.toml"
+
+# FIX DE KITTY DESDE ORIGEN OFICIAL (Aislado e independiente de tu repositorio local)
+echo -e "${BLUE}[*] Descargando paleta oficial de Catppuccin Mocha para Kitty...${NC}"
+curl -fsSL https://raw.githubusercontent.com/catppuccin/kitty/main/themes/mocha.conf -o "$HOME/.config/kitty/mocha.conf"
+cp -f "$HOME/.config/kitty/mocha.conf" "$HOME/.config/kitty/current-theme.conf"
 
 # ==============================================================================
-# 12. APLICACIÓN DE PREFERENCIAS, IDIOMAS Y KEYBINDINGS DE GNOME
+# 13. APLICACIÓN DE PREFERENCIAS, IDIOMAS Y KEYBINDINGS DE GNOME
 # ==============================================================================
 echo -e "${BLUE}[*] Inyectando tus configuraciones de dconf/gsettings...${NC}"
 
-# Distribución y mapeo de idiomas (US y Latam)
-gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'latam')]"
+# Vaciar completamente la barra de tareas (Dash de GNOME)
+gsettings set org.gnome.shell favorite-apps "[]"
 
-# Activación física de extensiones instaladas
+gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'latam')]"
 gsettings set org.gnome.shell enabled-extensions "['background-logo@fedorahosted.org', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'Vitals@CoreCoding.com', 'logomenu@aryan_k', 'space-bar@luchrioh']"
 
-# Aplicación de temas en el entorno GNOME
+# Aplicación exacta del Layout de Graphite compilado con islas superiores
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
 gsettings set org.gnome.desktop.interface gtk-theme 'Graphite-teal-Dark-nord'
 gsettings set org.gnome.shell.extensions.user-theme name 'Graphite-teal-Dark-nord'
 gsettings set org.gnome.desktop.interface icon-theme 'Reversal-dark'
 gsettings set org.gnome.desktop.interface cursor-theme 'Bibata-Modern-Ice'
 
-# Mapeos de atajos de teclado esenciales (Window Management)
+# Atajos de Ventana
 gsettings set org.gnome.desktop.wm.keybindings close "['<Super>q']"
 gsettings set org.gnome.desktop.wm.keybindings switch-input-source "['<Control>space']"
 gsettings set org.gnome.desktop.wm.keybindings switch-input-source-backward "['<Shift><Control>space']"
@@ -234,50 +245,49 @@ gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-2 "['<Super>2
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-3 "['<Super>3']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-4 "['<Super>4']"
 
-# Desvincular comportamiento nativo para evitar colisiones con Super+Número
 gsettings set org.gnome.shell.keybindings switch-to-application-1 "@as []"
 gsettings set org.gnome.shell.keybindings switch-to-application-2 "@as []"
 gsettings set org.gnome.shell.keybindings switch-to-application-3 "@as []"
 gsettings set org.gnome.shell.keybindings switch-to-application-4 "@as []"
 gsettings set org.gnome.desktop.wm.keybindings panel-main-menu "@as []"
-
-# Explorador de archivos nativo
 gsettings set org.gnome.settings-daemon.plugins.media-keys home "['<Super>e']"
 
-# Inyección de lanzadores personalizados (Custom Keybindings)
+# Atajos de lanzadores (Kitty y Ulauncher)
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/']"
-
-# Custom 0: Lanzar Kitty Terminal via Super + Enter
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'terminal'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'kitty'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>Return'
-
-# Custom 1: Lanzar Ulauncher via Super + Espacio
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'launcher'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'ulauncher'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding '<Super>space'
 
 # ==============================================================================
-# 13. CONFIGURACIONES ADICIONALES DE INTEGRACIÓN
+# 14. CONFIGURACIONES ADICIONALES DE INTEGRACIÓN
 # ==============================================================================
 echo -e "${BLUE}[*] Configurando el socket de usuario para Podman...${NC}"
 systemctl --user enable --now podman.socket
 
-# Configurar Git de forma global
 git config --global init.defaultBranch main
 git config --global core.editor "nvim"
 
 # ==============================================================================
-# 14. CAMBIO DE SHELL POR DEFECTO
+# 15. CAMBIO DE SHELL POR DEFECTO
 # ==============================================================================
-if [ "$SHELL" != "$(which zsh)" ]; then
+if [ "$SHELL" != "$(which zsh)" ] && command -v zsh &> /dev/null; then
     echo -e "${BLUE}[*] Cambiando shell por defecto a Zsh...${NC}"
     chsh -s "$(which zsh)"
 fi
 
+# ==============================================================================
+# 16. AUTENTICACIÓN INTERACTIVA (GITHUB)
+# ==============================================================================
+echo -e "${YELLOW}=========================================================${NC}"
+echo -e "${YELLOW}  Fase final: Autenticación en GitHub                    ${NC}"
+echo -e "${YELLOW}  Sigue las instrucciones en pantalla.                   ${NC}"
+echo -e "${YELLOW}=========================================================${NC}"
+gh auth login
+
 echo -e "${GREEN}=========================================================${NC}"
-echo -e "${GREEN}  ¡ENTORNO INSTALADO Y CONFIGURADO CON ÉXITO!            ${NC}"
-echo -e "${GREEN}  1. Cierra sesión de GNOME y vuelve a entrar para ver    ${NC}"
-echo -e "${GREEN}     reflejados todos los cambios estéticos.             ${NC}"
-echo -e "${GREEN}  2. Abre 'nvim' para permitir la autodescarga de plugins.${NC}"
+echo -e "${GREEN}  ¡ENTORNO INSTALADO! CIERRA SESIÓN Y VUELVE A ENTRAR    ${NC}"
+echo -e "${GREEN}  PARA QUE LAS ISLAS DE LA BARRA SE APLIQUEN.            ${NC}"
 echo -e "${GREEN}=========================================================${NC}"
