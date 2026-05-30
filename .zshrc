@@ -166,19 +166,6 @@ bindkey "^[[B" history-search-forward
 # ==============================================================================
 source ~/.zsh_plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# FIX DEFINITIVO PARA EVITAR LETRAS NEGRAS O INVISIBLES EN KITTY
-# Se fuerza el uso de la paleta explícita de Catppuccin Mocha en formato hexadecimal (Truecolor)
-ZSH_HIGHLIGHT_STYLES[default]='fg=#cdd6f4'
-ZSH_HIGHLIGHT_STYLES[comment]='fg=#6c7086,italic'
-ZSH_HIGHLIGHT_STYLES[command]='fg=#a6e3a1'          # Verde para comandos nativos
-ZSH_HIGHLIGHT_STYLES[alias]='fg=#a6e3a1'            # Verde para tus alias personalizados
-ZSH_HIGHLIGHT_STYLES[builtin]='fg=#a6e3a1'          # Verde para comandos integrados
-ZSH_HIGHLIGHT_STYLES[function]='fg=#a6e3a1'         # Verde para funciones de shell
-ZSH_HIGHLIGHT_STYLES[keyword]='fg=#cba6f7'
-ZSH_HIGHLIGHT_STYLES[string]='fg=#a6e3a1'
-ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#f9e2af'
-ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#f9e2af'
-ZSH_HIGHLIGHT_STYLES[path]='fg=#f5e0dc'
-ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#f38ba8,bold'
-
-ZLE_RPROMPT_INDENT=0
+precmd() {
+    print -Pn "\e[0m"
+}
